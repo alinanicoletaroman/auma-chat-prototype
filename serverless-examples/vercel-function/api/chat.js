@@ -1,0 +1,91 @@
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Use POST" });
+    return;
+  }
+
+  const { question = "", contexts = [], history = [] } = req.body || {};
+
+  const sourceText = contexts
+    .map((c, i) =>
+      `[${i + 1}] ${c.title}
+Typ: ${c.documentType || "–"}  |  Sprache: ${c.language || "–"}  |  Produkt: ${c.product || "–"}
+${c.text}
+URL: ${c.url}`
+    )
+    .join("\n\n---\n\n");
+
+  const systemPrompt = `You are a multilingual AUMA document assistant. AUMA manufactures electric actuators and gearboxes for industrial valves.
+
+LANGUAGE RULE (mandatory):
+- Detect the language of the user's latest message.
+- If the message is in English → reply in English.
+- If in German → reply in German.
+- If in French → reply in French. Apply the same rule for any other language.
+- Mixed languages (e.g. mostly English with one German word): use the dominant language.
+- Never switch language mid-conversation unless the user does first.
+
+CLARIFICATION RULE:
+- ONLY ask a clarifying question when BOTH conditions are true:
+  (a) the user mentions a product/model name, AND
+  (b) there is NO indication of document type anywhere in the message or conversation history (no words like certificate, zertifikat, manual, betriebsanleitung, technical data, technische daten, wiring, schaltplan, installation, datasheet, spare parts, quick guide, etc.)
+- If the user already named the document type (even loosely, e.g. "product certificates", "operating manual", "wiring diagram"), do NOT ask for clarification – go straight to answering.
+- When in doubt, attempt to answer rather than ask.
+- In that case: write your question as plain text, and on the last line write exactly: CLARIFYING: true
+- Do NOT show RANKED when asking a clarifying question.
+
+ANSWER RULES (when sources are provided and intent is clear):
+1. Recommend the most relevant document(s) from the provided sources.
+2. Explain briefly (1-2 sentences) why each recommended document matches.
+3. Cite source numbers like [1], [2].
+4. If none match well, say so honestly.
+5. Be concise – max 4-6 sentences total.
+6. Never invent content or URLs not in the sources.
+7. At the very end, on a new line, output ONLY:
+RANKED: [most_relevant_number, second, third, ...]
+Example: RANKED: [3,1,5,2,4,6]`;
+
+  const historyMessages = history.map(h => ({ role: h.role, content: h.content }));
+
+  const userMessage = `Question: ${question}
+
+Available sources:
+${sourceText}`;
+
+  const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.XAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "grok-3-mini",
+      temperature: 0.15,
+      max_tokens: 512,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...historyMessages,
+        { role: "user",   content: userMessage }
+      ]
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    res.status(502).json({ error: data.error?.message || "xAI API error" });
+    return;
+  }
+
+  const raw = data.choices?.[0]?.message?.content || "No answer returned.";
+
+  const clarifying = /CLARIFYING:\s*true/i.test(raw);
+  const rankedMatch = raw.match(/RANKED:\s*(\[[\d,\s]+\])/);
+  const ranking = rankedMatch ? JSON.parse(rankedMatch[1]) : null;
+  const answer = raw
+    .replace(/\nRANKED:\s*\[[\d,\s]+\]\s*$/m, "")
+    .replace(/\nCLARIFYING:\s*true\s*$/im, "")
+    .trim();
+
+  res.status(200).json({ answer, ranking, clarifying });
+}

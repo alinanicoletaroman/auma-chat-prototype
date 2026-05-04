@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "api/search.js": {
+      "includeFiles": "public/**",
+      "maxDuration": 30
+    },
+    "api/chat.js": {
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    { "src": "/api/search", "dest": "/api/search.js" },
+    { "src": "/api/chat",   "dest": "/api/chat.js"   },
+    { "src": "/(.*)",       "dest": "/public/$1"      }
+  ]
+}

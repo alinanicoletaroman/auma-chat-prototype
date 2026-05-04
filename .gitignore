@@ -1,0 +1,13 @@
+node_modules/
+
+# Environment / secrets — never commit these
+.env
+.env.local
+.env*.local
+
+# Model cache from @xenova/transformers (no longer used)
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
