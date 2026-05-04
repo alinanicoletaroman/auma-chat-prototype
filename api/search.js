@@ -131,7 +131,33 @@ module.exports = async function handler(req, res) {
       return { id: item.id, score };
     }).sort((a, b) => b.score - a.score);
 
+    const TYPE_ALIASES = {
+      "Technische Daten":       ["Technical data","Données techniques","Datos técnicos","Dati tecnici","Technische gegevens","Dane techniczne"],
+      "Elektrische Daten":      ["Electrical data","Données électriques","Datos eléctricos","Dati elettrici"],
+      "Betriebsanleitung":      ["Operating manual","Manuel d'utilisation","Manual de funcionamiento","Manuale operativo","Bedieningshandleiding","Instrukcja obsługi"],
+      "Montageanleitung":       ["Installation manual","Mounting instructions","Manuel de montage","Manual de instalación","Installatie handleiding","Instrukcja montażu"],
+      "Schaltplan":             ["Wiring diagram","Schéma de câblage","Diagrama de cableado","Schema elettrico"],
+      "Produktzertifikat":      ["Product certificate","Certificate","Certificat","Certificado","Certificato"],
+      "Zertifikate":            ["Certificates","Certificats","Certificados","Certificati"],
+      "Ersatzteilliste":        ["Spare parts list","Liste de pièces de rechange","Lista de repuestos"],
+      "Kurzanleitung":          ["Quick guide","Short instructions","Guide rapide","Guía rápida"],
+      "Maßblatt":               ["Dimension sheet","Dimensional drawing","Plan coté","Plano dimensional"],
+      "Handbuch":               ["Manual","Handbook","Manuel","Manual","Manuale","Handboek"],
+      "Prospekt":               ["Brochure","Folleto","Brochure"],
+      "Ausschreibungstext":     ["Tender text","Specification text","Texte d'appel d'offres"],
+      "Technische Beschreibung":["Technical description","Description technique","Descripción técnica"],
+      "Anfahrtskizze":          ["Route map","Direction map"],
+      "Bestellformular":        ["Order form","Bon de commande"],
+      "Informationsbrief":      ["Information letter","Lettre d'information"],
+      "Merkblatt":              ["Information sheet","Fact sheet","Fiche d'information"],
+      "Montagepositionen":      ["Mounting positions","Positions de montage"],
+    };
+
     if (language) results = results.filter(r => docsById[r.id]?.language === language);
+    if (type) {
+      const aliases = new Set([type, ...(TYPE_ALIASES[type] || [])]);
+      results = results.filter(r => aliases.has(docsById[r.id]?.documentType));
+    }
 
     const docs = results
       .slice(0, limit)

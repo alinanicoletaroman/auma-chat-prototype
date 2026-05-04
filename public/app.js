@@ -2,11 +2,11 @@
 let conversationHistory = [];
 
 /* ── Vector search via server ──────────────────────────── */
-async function search(query, type, limit = 6) {
+async function search(query, language, type, limit = 6) {
   const res  = await fetch("/api/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, type, limit }),
+    body: JSON.stringify({ query, language, type, limit }),
   });
 
   const text = await res.text();
@@ -164,7 +164,7 @@ async function handleAsk() {
 
   let results;
   try {
-    results = await search(query, type, 12);
+    results = await search(query, manualLang, type, 12);
   } catch (err) {
     removeTypingIndicator();
     appendAssistantMessage(`<p class='msg-error'>Search error: ${esc(err.message)}</p>`, []);
