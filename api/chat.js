@@ -1,27 +1,8 @@
-function checkBasicAuth(req, res) {
-  const header = req.headers["authorization"] || "";
-  if (!header.startsWith("Basic ")) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="AUMA Demo"');
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-  const decoded      = Buffer.from(header.slice(6), "base64").toString("utf-8");
-  const [user, pass] = decoded.split(":");
-  if (user !== process.env.BASIC_AUTH_USER || pass !== process.env.BASIC_AUTH_PASS) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="AUMA Demo"');
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-  return true;
-}
-
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Use POST" });
     return;
   }
-
-  if (!checkBasicAuth(req, res)) return;
 
   try {
     if (!process.env.GROQ_API_KEY) throw new Error("Missing GROQ_API_KEY");
@@ -85,11 +66,11 @@ Example: RANKED: [3,1,5,2,4,6]`;
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || "Groq API error");
 
-    const raw        = data.choices?.[0]?.message?.content || "No answer returned.";
-    const clarifying = /CLARIFYING:\s*true/i.test(raw);
+    const raw         = data.choices?.[0]?.message?.content || "No answer returned.";
+    const clarifying  = /CLARIFYING:\s*true/i.test(raw);
     const rankedMatch = raw.match(/RANKED:\s*(\[[\d,\s]+\])/);
-    const ranking    = rankedMatch ? JSON.parse(rankedMatch[1]) : null;
-    const answer     = raw
+    const ranking     = rankedMatch ? JSON.parse(rankedMatch[1]) : null;
+    const answer      = raw
       .replace(/\nRANKED:\s*\[[\d,\s]+\]\s*$/m, "")
       .replace(/\nCLARIFYING:\s*true\s*$/im, "")
       .trim();

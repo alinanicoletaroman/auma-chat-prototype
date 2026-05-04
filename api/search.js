@@ -1,73 +1,50 @@
 const fs   = require("fs");
 const path = require("path");
+const { pipeline, env } = require("@xenova/transformers");
 
-const HF_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2";
+// Point to the model pre-downloaded at build time (bundled via includeFiles)
+env.cacheDir          = path.join(process.cwd(), "model-cache");
+env.allowRemoteModels = false;
+
+let _embedPipe = null;
 
 async function embedQuery(text) {
-  const res = await fetch(
-    `https://api-inference.huggingface.co/pipeline/feature-extraction/${HF_MODEL}`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.HF_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: text, options: { wait_for_model: true } }),
-    }
-  );
-
-  if (!res.ok) {
-    const e = await res.json();
-    throw new Error(e.error || "HuggingFace embedding error");
+  if (!_embedPipe) {
+    _embedPipe = await pipeline(
+      "feature-extraction",
+      "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
+      { quantized: true }
+    );
   }
-
-  let data = await res.json();
-  // HF returns [[...384 floats...]] for a single string — unwrap outer array
-  if (Array.isArray(data[0])) data = data[0];
-
-  // Normalize to match stored vectors (built with normalize: true)
-  const norm = Math.sqrt(data.reduce((s, v) => s + v * v, 0));
-  return new Float32Array(data.map(v => v / norm));
+  const out = await _embedPipe(text, { pooling: "mean", normalize: true });
+  return new Float32Array(out.data);
 }
 
-// Cached between warm Lambda invocations
 let docsById   = null;
 let vectorData = null;
 
 function loadIndex() {
   if (docsById && vectorData) return;
 
-  const indexPath   = path.join(process.cwd(), "public", "auma-index.json");
-  const vectorsPath = path.join(process.cwd(), "public", "auma-vectors.json");
+  const cwd         = process.cwd();
+  const indexPath   = path.join(cwd, "public", "auma-index.json");
+  const vectorsPath = path.join(cwd, "public", "auma-vectors.json");
 
-  const docs = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
-  docsById   = Object.fromEntries(docs.map(d => [d.id, d]));
+  try {
+    const docs = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+    docsById   = Object.fromEntries(docs.map(d => [d.id, d]));
 
-  const raw  = JSON.parse(fs.readFileSync(vectorsPath, "utf-8"));
-  vectorData = raw.map(r => ({ id: r.id, vector: new Float32Array(r.vector) }));
+    const raw  = JSON.parse(fs.readFileSync(vectorsPath, "utf-8"));
+    vectorData = raw.map(r => ({ id: r.id, vector: new Float32Array(r.vector) }));
+  } catch (e) {
+    throw new Error(`Index load failed (cwd=${cwd}): ${e.message}`);
+  }
 }
 
 function cosineSimilarity(a, b) {
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
   return dot;
-}
-
-function checkBasicAuth(req, res) {
-  const header = req.headers["authorization"] || "";
-  if (!header.startsWith("Basic ")) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="AUMA Demo"');
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-  const decoded  = Buffer.from(header.slice(6), "base64").toString("utf-8");
-  const [user, pass] = decoded.split(":");
-  if (user !== process.env.BASIC_AUTH_USER || pass !== process.env.BASIC_AUTH_PASS) {
-    res.setHeader("WWW-Authenticate", 'Basic realm="AUMA Demo"');
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-  return true;
 }
 
 const BOOST_STOPWORDS = new Set([
@@ -103,8 +80,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (!checkBasicAuth(req, res)) return;
-
   try {
     const { query, language, type, limit = 6 } = req.body || {};
     if (!query) { res.status(400).json({ error: "missing query" }); return; }
@@ -121,7 +96,6 @@ module.exports = async function handler(req, res) {
       return re.test(field);
     }
 
-    // Detect document type intent for score boosting (not hard filtering)
     let detectedType = type;
     if (!detectedType) {
       for (const intent of DOC_TYPE_INTENTS) {
@@ -152,14 +126,12 @@ module.exports = async function handler(req, res) {
           if (titleL.includes(term) && !queryLower.includes(term)) score -= 0.20;
         }
 
-        // Soft boost — matching type floats to top without hard-excluding others
         if (detectedType && doc.documentType === detectedType) score += 0.40;
       }
 
       return { id: item.id, score };
     }).sort((a, b) => b.score - a.score);
 
-    // Language is an explicit user selection — keep as hard filter
     if (language) results = results.filter(r => docsById[r.id]?.language === language);
 
     const docs = results

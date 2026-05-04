@@ -4,37 +4,24 @@ const path = require("path");
 
 const PORT         = 3000;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const HF_API_TOKEN = process.env.HF_API_TOKEN;
 
-const HF_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2";
+const { pipeline, env } = require("@xenova/transformers");
+env.cacheDir = path.join(__dirname, ".cache");
+
+let _embedPipe = null;
 
 async function embedQuery(text) {
-  if (!HF_API_TOKEN) throw new Error("Missing HF_API_TOKEN. Set it in PowerShell first.");
-
-  const res = await fetch(
-    `https://api-inference.huggingface.co/pipeline/feature-extraction/${HF_MODEL}`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HF_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: text, options: { wait_for_model: true } }),
-    }
-  );
-
-  if (!res.ok) {
-    const e = await res.json();
-    throw new Error(e.error || "HuggingFace embedding error");
+  if (!_embedPipe) {
+    console.log("Loading embedding model (first run downloads ~45 MB — one-time only)...");
+    _embedPipe = await pipeline(
+      "feature-extraction",
+      "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
+      { quantized: true }
+    );
+    console.log("Embedding model ready.");
   }
-
-  let data = await res.json();
-  // HF returns [[...384 floats...]] for a single string — unwrap outer array
-  if (Array.isArray(data[0])) data = data[0];
-
-  // Normalize to match stored vectors (built with normalize: true)
-  const norm = Math.sqrt(data.reduce((s, v) => s + v * v, 0));
-  return new Float32Array(data.map(v => v / norm));
+  const out = await _embedPipe(text, { pooling: "mean", normalize: true });
+  return new Float32Array(out.data);
 }
 
 const INDEX_PATH   = path.join(__dirname, "public", "auma-index.json");

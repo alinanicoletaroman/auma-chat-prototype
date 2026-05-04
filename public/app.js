@@ -3,16 +3,25 @@ let conversationHistory = [];
 
 /* ── Vector search via server ──────────────────────────── */
 async function search(query, language, type, limit = 6) {
-  const res = await fetch("/api/search", {
+  const res  = await fetch("/api/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, language, type, limit }),
   });
+
+  const text = await res.text();
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Search failed");
+    let msg = "Search failed";
+    try { msg = JSON.parse(text).error || msg; } catch {}
+    throw new Error(`[${res.status}] ${msg}`);
   }
-  return res.json();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Server returned non-JSON (HTTP ${res.status}): ${text.slice(0, 150)}`);
+  }
 }
 
 /* ── DOM helpers ───────────────────────────────────────── */

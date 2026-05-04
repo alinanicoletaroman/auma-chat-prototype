@@ -1,9 +1,9 @@
 {
-  "outputDirectory": "public",
+  "buildCommand": "node scripts/download-model.js",
   "functions": {
     "api/search.js": {
-      "includeFiles": "public/**",
-      "maxDuration": 30
+      "includeFiles": "public/**,model-cache/**",
+      "maxDuration": 60
     },
     "api/chat.js": {
       "maxDuration": 30
