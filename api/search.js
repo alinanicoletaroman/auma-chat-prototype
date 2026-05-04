@@ -1,15 +1,14 @@
 const fs   = require("fs");
 const path = require("path");
-const { pipeline, env } = require("@xenova/transformers");
 
-// Point to the model pre-downloaded at build time (bundled via includeFiles)
-env.cacheDir          = path.join(process.cwd(), "model-cache");
-env.allowRemoteModels = false;
-
+// @xenova/transformers is ESM-only — must use dynamic import() in a CJS module
 let _embedPipe = null;
 
 async function embedQuery(text) {
   if (!_embedPipe) {
+    const { pipeline, env } = await import("@xenova/transformers");
+    env.cacheDir          = path.join(process.cwd(), "model-cache");
+    env.allowRemoteModels = false;
     _embedPipe = await pipeline(
       "feature-extraction",
       "Xenova/paraphrase-multilingual-MiniLM-L12-v2",

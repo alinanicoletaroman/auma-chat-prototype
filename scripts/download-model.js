@@ -1,21 +1,21 @@
 const path = require("path");
-const { pipeline, env } = require("@xenova/transformers");
 
-env.cacheDir = path.join(__dirname, "..", "model-cache");
-env.allowRemoteModels = true;
+// @xenova/transformers is ESM-only — use dynamic import()
+(async () => {
+  const { pipeline, env } = await import("@xenova/transformers");
 
-console.log("Downloading embedding model to model-cache/ ...");
+  env.cacheDir          = path.join(__dirname, "..", "model-cache");
+  env.allowRemoteModels = true;
 
-pipeline(
-  "feature-extraction",
-  "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
-  { quantized: true }
-)
-  .then(() => {
-    console.log("Model downloaded successfully.");
-    process.exit(0);
-  })
-  .catch(err => {
-    console.error("Model download failed:", err.message);
-    process.exit(1);
-  });
+  console.log("Downloading embedding model to model-cache/ ...");
+  await pipeline(
+    "feature-extraction",
+    "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
+    { quantized: true }
+  );
+  console.log("Model downloaded successfully.");
+  process.exit(0);
+})().catch(err => {
+  console.error("Model download failed:", err.message);
+  process.exit(1);
+});
