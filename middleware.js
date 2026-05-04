@@ -1,3 +1,6 @@
+// Vercel Edge Middleware — Basic Auth for all routes
+// NOTE: This file must use ESM syntax (export default) regardless of package.json "type"
+
 export default function middleware(request) {
   const authHeader = request.headers.get("authorization") || "";
 
@@ -11,7 +14,7 @@ export default function middleware(request) {
       user === process.env.BASIC_AUTH_USER &&
       pass === process.env.BASIC_AUTH_PASS
     ) {
-      return;
+      return; // allow
     }
   }
 
@@ -22,5 +25,5 @@ export default function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/((?!_vercel).*)"],
+  matcher: ["/((?!_vercel|_next).*)"],
 };
