@@ -1,8 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/api/search", "destination": "/api/search.js" },
-    { "source": "/api/chat",   "destination": "/api/chat.js"   }
-  ],
+  "buildCommand": "",
+  "outputDirectory": ".",
   "functions": {
     "api/search.js": {
       "includeFiles": "public/**",
