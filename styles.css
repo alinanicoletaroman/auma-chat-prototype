@@ -74,6 +74,7 @@ body {
 .brand-logo {
   height: 26px;
   width: auto;
+  filter: brightness(0) invert(1);
 }
 
 .brand-divider {
