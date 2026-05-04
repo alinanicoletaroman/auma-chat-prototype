@@ -2,11 +2,11 @@
 let conversationHistory = [];
 
 /* ── Vector search via server ──────────────────────────── */
-async function search(query, language, type, limit = 6) {
+async function search(query, type, limit = 6) {
   const res  = await fetch("/api/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, language, type, limit }),
+    body: JSON.stringify({ query, type, limit }),
   });
 
   const text = await res.text();
@@ -149,51 +149,13 @@ textarea.addEventListener("keydown", e => {
   }
 });
 
-/* ── Search-only (no AI) ───────────────────────────────── */
-async function handleSearch() {
-  const query = textarea.value.trim();
-  if (!query) return;
-
-  const language = document.getElementById("languageFilter").value;
-  const type     = document.getElementById("typeFilter").value;
-
-  appendUserMessage(query);
-  textarea.value = "";
-  textarea.style.height = "auto";
-  appendTypingIndicator();
-
-  let results;
-  try {
-    results = await search(query, language, type);
-  } catch (err) {
-    removeTypingIndicator();
-    appendAssistantMessage(`<p class='msg-error'>Search error: ${esc(err.message)}</p>`, []);
-    return;
-  }
-
-  removeTypingIndicator();
-
-  if (!results.length) {
-    appendAssistantMessage(
-      "<p>No matching documents found / Keine passenden Dokumente gefunden. Try different keywords or adjust the filters.</p>",
-      []
-    );
-    return;
-  }
-
-  appendAssistantMessage(
-    `<p><strong>${results.length}</strong> matching document${results.length !== 1 ? "s" : ""} found (vector search — click <em>Fragen</em> for an AI-assisted answer):</p>`,
-    results
-  );
-}
-
 /* ── AI-assisted ask ───────────────────────────────────── */
 async function handleAsk() {
   const query = textarea.value.trim();
   if (!query) return;
 
-  const language = document.getElementById("languageFilter").value;
-  const type     = document.getElementById("typeFilter").value;
+  const manualLang = document.getElementById("languageFilter").value;
+  const type       = document.getElementById("typeFilter").value;
 
   appendUserMessage(query);
   textarea.value = "";
@@ -202,7 +164,7 @@ async function handleAsk() {
 
   let results;
   try {
-    results = await search(query, language, type);
+    results = await search(query, type, 12);
   } catch (err) {
     removeTypingIndicator();
     appendAssistantMessage(`<p class='msg-error'>Search error: ${esc(err.message)}</p>`, []);
@@ -223,9 +185,10 @@ async function handleAsk() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        question: query,
-        history:  conversationHistory.slice(-6),
-        contexts: results.map(doc => ({
+        question:   query,
+        manualLang: manualLang,
+        history:    conversationHistory.slice(-6),
+        contexts:   results.map(doc => ({
           title:        doc.title,
           url:          doc.url,
           language:     doc.language,
@@ -240,9 +203,10 @@ async function handleAsk() {
 
     if (!response.ok) throw new Error("HTTP " + response.status);
 
-    const data   = await response.json();
-    const answer = data.answer || "Keine Antwort erhalten.";
+    const data         = await response.json();
+    const answer       = data.answer || "Keine Antwort erhalten.";
     const isClarifying = data.clarifying === true;
+    const detectedLang = data.detectedLang || manualLang || null;
 
     conversationHistory.push({ role: "user",      content: query  });
     conversationHistory.push({ role: "assistant",  content: answer });
@@ -253,6 +217,7 @@ async function handleAsk() {
     }
 
     let orderedResults = results;
+
     if (Array.isArray(data.ranking) && data.ranking.length) {
       const ranked = [];
       for (const n of data.ranking) {
@@ -265,6 +230,14 @@ async function handleAsk() {
       orderedResults = ranked;
     }
 
+    if (detectedLang) {
+      const inLang  = orderedResults.filter(d => d.language === detectedLang);
+      const outLang = orderedResults.filter(d => d.language !== detectedLang);
+      orderedResults = [...inLang, ...outLang];
+    }
+
+    orderedResults = orderedResults.slice(0, 6);
+
     appendAssistantMessage(
       `<div class="ai-answer">${esc(answer)}</div>`,
       orderedResults
@@ -275,16 +248,10 @@ async function handleAsk() {
     appendAssistantMessage(
       `<p>Gefundene Dokumente (KI-Antwort nicht verfügbar – <code>/api/chat</code> konnte nicht erreicht werden).</p>
        <p class="msg-error">Fehler: ${esc(err.message)}</p>`,
-      results
+      results.slice(0, 6)
     );
   }
 }
 
 /* ── Button bindings ───────────────────────────────────── */
-document.getElementById("searchBtn").addEventListener("click", handleSearch);
 document.getElementById("askBtn").addEventListener("click", handleAsk);
-
-/* ── Filter change: re-run last search silently ─────────── */
-["languageFilter","typeFilter"].forEach(id => {
-  document.getElementById(id).addEventListener("change", () => {});
-});

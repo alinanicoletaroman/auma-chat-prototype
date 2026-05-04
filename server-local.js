@@ -178,7 +178,7 @@ async function handleChat(req, res) {
         throw new Error("Missing GROQ_API_KEY. Set it in PowerShell first.");
       }
 
-      const { question = "", contexts = [], history = [] } = JSON.parse(body || "{}");
+      const { question = "", contexts = [], history = [], manualLang = "" } = JSON.parse(body || "{}");
 
       const sourceText = contexts
         .map((c, i) =>
@@ -186,10 +186,14 @@ async function handleChat(req, res) {
         )
         .join("\n\n---\n\n");
 
+      const langInstruction = manualLang
+        ? `The user has manually selected language: "${manualLang}". Prefer documents in that language and reply in that language.`
+        : `Detect the language of the user's latest message and use that as the target language for both your reply and document recommendations.`;
+
       const systemPrompt = `You are a multilingual AUMA document assistant. AUMA manufactures electric actuators and gearboxes for industrial valves.
 
 LANGUAGE RULE (mandatory):
-- Detect the language of the user's latest message.
+- ${langInstruction}
 - If the message is in English → reply in English.
 - If in German → reply in German.
 - If in French → reply in French. Apply the same rule for any other language.
@@ -203,18 +207,22 @@ CLARIFICATION RULE:
 - If the user already named the document type (even loosely, e.g. "product certificates", "operating manual", "wiring diagram"), do NOT ask for clarification – go straight to answering.
 - When in doubt, attempt to answer rather than ask.
 - In that case: write your question as plain text, and on the last line write exactly: CLARIFYING: true
-- Do NOT show RANKED when asking a clarifying question.
+- Do NOT show RANKED or LANG when asking a clarifying question.
 
 ANSWER RULES (when sources are provided and intent is clear):
-1. Recommend the most relevant document(s) from the provided sources.
+1. Recommend the most relevant document(s) from the provided sources. Prefer documents whose language matches the user's query language.
 2. Explain briefly (1-2 sentences) why each recommended document matches.
 3. Cite source numbers like [1], [2].
 4. If none match well, say so honestly.
 5. Be concise – max 4-6 sentences total.
 6. Never invent content or URLs not in the sources.
-7. At the very end, on a new line, output ONLY:
+7. At the very end, on two separate new lines, output ONLY:
 RANKED: [most_relevant_number, second, third, ...]
-Example: RANKED: [3,1,5,2,4,6]`;
+LANG: <detected_language>
+Where <detected_language> is the exact language label from the documents (e.g. English, Deutsch, Français, Español, Italiano, Polski, Nederlands, Русский, Svenska, Čeština, Magyar, Türkçe, 中文, 日本語).
+Example:
+RANKED: [3,1,5,2,4,6]
+LANG: English`;
 
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -248,16 +256,19 @@ Example: RANKED: [3,1,5,2,4,6]`;
         data.choices?.[0]?.text ||
         "No answer returned.";
 
-      const clarifying = /CLARIFYING:\s*true/i.test(raw);
+      const clarifying  = /CLARIFYING:\s*true/i.test(raw);
       const rankedMatch = raw.match(/RANKED:\s*(\[[\d,\s]+\])/);
-      const ranking = rankedMatch ? JSON.parse(rankedMatch[1]) : null;
+      const ranking     = rankedMatch ? JSON.parse(rankedMatch[1]) : null;
+      const langMatch   = raw.match(/LANG:\s*([^\n]+)/);
+      const detectedLang = langMatch ? langMatch[1].trim() : null;
       const answer = raw
         .replace(/\nRANKED:\s*\[[\d,\s]+\]\s*$/m, "")
+        .replace(/\nLANG:\s*[^\n]+/m, "")
         .replace(/\nCLARIFYING:\s*true\s*$/im, "")
         .trim();
 
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ answer, ranking, clarifying }));
+      res.end(JSON.stringify({ answer, ranking, clarifying, detectedLang }));
     } catch (error) {
       console.error(error);
 

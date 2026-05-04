@@ -1,6 +1,9 @@
 const fs = require("fs");
 
-const BASE_URL = "https://auma.com/de_DE/documents-funnel-api";
+const SOURCES = [
+  "https://auma.com/de_DE/documents-funnel-api",
+  "https://auma.com/en_001/documents-funnel-api",
+];
 
 function flattenResults(results) {
   const docs = [];
@@ -32,12 +35,12 @@ function flattenResults(results) {
   return docs;
 }
 
-async function main() {
+async function fetchAllFromSource(baseUrl) {
   let allDocs = [];
   let page = 1;
 
   while (true) {
-    const url = `${BASE_URL}?page=${page}&_=${Date.now()}`;
+    const url = `${baseUrl}?page=${page}&_=${Date.now()}`;
     console.log("Loading:", url);
 
     const response = await fetch(url);
@@ -55,13 +58,31 @@ async function main() {
     page++;
   }
 
+  console.log(`Fetched ${allDocs.length} docs from ${baseUrl}`);
+  return allDocs;
+}
+
+async function main() {
+  const seen = new Set();
+  const allDocs = [];
+
+  for (const source of SOURCES) {
+    const docs = await fetchAllFromSource(source);
+    for (const doc of docs) {
+      if (!seen.has(doc.id)) {
+        seen.add(doc.id);
+        allDocs.push(doc);
+      }
+    }
+  }
+
   fs.writeFileSync(
     "public/auma-index.json",
     JSON.stringify(allDocs, null, 2),
     "utf8"
   );
 
-  console.log(`Saved ${allDocs.length} documents.`);
+  console.log(`Saved ${allDocs.length} unique documents.`);
 }
 
 main();
