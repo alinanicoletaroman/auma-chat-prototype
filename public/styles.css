@@ -151,7 +151,7 @@ select {
 }
 
 select:focus {
-  outline: 2px solid var(--auma-orange);
+  outline: 2px solid var(--auma-accent);
   outline-offset: 1px;
 }
 
@@ -222,7 +222,7 @@ select:focus {
 }
 
 .message--user .message-avatar {
-  background: var(--auma-orange);
+  background: var(--auma-blue-mid);
 }
 
 .message-bubble {
@@ -243,8 +243,7 @@ select:focus {
 
 .message-bubble p { margin-bottom: 8px; }
 .message-bubble p:last-child { margin-bottom: 0; }
-.message-bubble em { color: var(--auma-orange); font-style: normal; font-weight: 600; }
-.message--user .message-bubble em { color: var(--auma-orange-lt); }
+.message-bubble em { color: var(--auma-accent); font-style: normal; font-weight: 600; }
 
 /* ── Result cards (inside assistant bubble) ─────────────── */
 .doc-results {
@@ -267,7 +266,7 @@ select:focus {
 }
 
 .doc-card:hover {
-  border-color: var(--auma-orange);
+  border-color: var(--auma-accent);
   box-shadow: var(--shadow-md);
 }
 
@@ -370,7 +369,7 @@ select:focus {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--auma-orange);
+  background: var(--auma-accent);
   animation: bounce 1.2s infinite;
 }
 
@@ -421,7 +420,7 @@ textarea {
 
 textarea:focus {
   outline: none;
-  border-color: var(--auma-orange);
+  border-color: var(--auma-accent);
   background: var(--surface);
 }
 
@@ -451,11 +450,11 @@ textarea:focus {
 .btn:active { transform: scale(.97); }
 
 .btn--primary {
-  background: var(--auma-orange);
+  background: var(--auma-blue);
   color: #fff;
 }
 
-.btn--primary:hover { background: var(--auma-orange-dk); }
+.btn--primary:hover { background: var(--auma-blue-mid); }
 
 .btn--secondary {
   background: transparent;

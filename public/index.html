@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AUMA Dokument-Assistent</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="layout">
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <svg class="brand-logo" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="AUMA">
+            <text x="0" y="26" font-family="Arial,sans-serif" font-size="28" font-weight="900" fill="#FFFFFF" letter-spacing="4">AUMA</text>
+          </svg>
+          <span class="brand-divider"></span>
+          <span class="brand-sub">Dokument-Assistent</span>
+        </div>
+        <div class="topbar-links">
+          <a href="https://auma.com/de_DE/Downloads/dokumentenfinder" target="_blank" rel="noreferrer">Dokumentenfinder ↗</a>
+        </div>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <p class="sidebar-label">Filter</p>
+
+        <label class="field-label" for="languageFilter">Sprache</label>
+        <select id="languageFilter">
+          <option value="">Alle Sprachen</option>
+          <option value="Deutsch">Deutsch</option>
+          <option value="English">English</option>
+          <option value="Français">Français</option>
+          <option value="Español">Español</option>
+          <option value="Italiano">Italiano</option>
+          <option value="Nederlands">Nederlands</option>
+          <option value="Polski">Polski</option>
+          <option value="Русский">Русский</option>
+          <option value="Svenska">Svenska</option>
+          <option value="Čeština">Čeština</option>
+          <option value="Magyar">Magyar</option>
+          <option value="Türkçe">Türkçe</option>
+          <option value="中文">中文</option>
+          <option value="日本語">日本語</option>
+        </select>
+
+        <label class="field-label" for="typeFilter">Dokumenttyp</label>
+        <select id="typeFilter">
+          <option value="">Alle Typen</option>
+          <option value="Anfahrtskizze">Anfahrtskizze</option>
+          <option value="Ausschreibungstext">Ausschreibungstext</option>
+          <option value="Bestellformular">Bestellformular</option>
+          <option value="Betriebsanleitung">Betriebsanleitung</option>
+          <option value="Elektrische Daten">Elektrische Daten</option>
+          <option value="Ersatzteilliste">Ersatzteilliste</option>
+          <option value="Handbuch">Handbuch</option>
+          <option value="Informationsbrief">Informationsbrief</option>
+          <option value="Kurzanleitung">Kurzanleitung</option>
+          <option value="Maßblatt">Maßblatt</option>
+          <option value="Merkblatt">Merkblatt</option>
+          <option value="Montageanleitung">Montageanleitung</option>
+          <option value="Montagepositionen">Montagepositionen</option>
+          <option value="PM Produkt-Information">PM Produkt-Information</option>
+          <option value="Produktzertifikat">Produktzertifikat</option>
+          <option value="Prospekt">Prospekt</option>
+          <option value="Schaltplan">Schaltplan</option>
+          <option value="Sonstiges">Sonstiges</option>
+          <option value="Technische Beschreibung">Technische Beschreibung</option>
+          <option value="Technische Daten">Technische Daten</option>
+          <option value="Zertifikate">Zertifikate</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section sidebar-info">
+        <p class="sidebar-label">Hinweis</p>
+        <p class="sidebar-text">
+          Stellen Sie Fragen in Ihrer Sprache. Der Assistent findet passende AUMA-Dokumente und erklärt Ihnen die Ergebnisse.
+        </p>
+      </div>
+    </aside>
+
+    <main class="chat-area">
+      <div id="messages" class="messages">
+        <div class="message message--assistant">
+          <div class="message-avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4l3 3"/>
+            </svg>
+          </div>
+          <div class="message-bubble">
+            <p>Guten Tag! Ich bin Ihr AUMA Dokument-Assistent.</p>
+            <p>Beschreiben Sie, welches Dokument Sie suchen – z.&thinsp;B. <em>„Betriebsanleitung für SA 07.2"</em> oder <em>„I need the technical data for SGC 05.1"</em>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-inner">
+          <textarea
+            id="query"
+            rows="1"
+            placeholder="Frage stellen … z. B. Betriebsanleitung für SA 07.2"
+            autocomplete="off"
+            spellcheck="true"
+          ></textarea>
+          <div class="composer-actions">
+            <button id="searchBtn" class="btn btn--secondary" title="Nur lokal suchen (kein API-Aufruf)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              Suchen
+            </button>
+            <button id="askBtn" class="btn btn--primary" title="Dokumente suchen und KI-Antwort generieren">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9l20-7z"/>
+              </svg>
+              Fragen
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
