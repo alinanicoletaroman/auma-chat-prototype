@@ -47,7 +47,18 @@ const SVG_DL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
   <line x1="12" y1="15" x2="12" y2="3"/>
 </svg>`;
 
+function normalizeUrl(url) {
+  if (!url) return url;
+  if (url.startsWith("https://www.")) return url;
+  if (url.startsWith("https://")) return "https://www." + url.slice(8);
+  if (url.startsWith("http://www.")) return "https://" + url.slice(7);
+  if (url.startsWith("http://")) return "https://www." + url.slice(7);
+  if (url.startsWith("www.")) return "https://" + url;
+  return "https://www." + url;
+}
+
 function buildDocCard(doc, index) {
+  const url = normalizeUrl(doc.url);
   const fileSize = doc.fileSize
     ? `${Math.round(doc.fileSize / 1024)} KB`
     : "";
@@ -55,7 +66,7 @@ function buildDocCard(doc, index) {
     <div class="doc-card">
       <div class="doc-card-icon">${SVG_PDF}</div>
       <div class="doc-card-body">
-        <a class="doc-card-title" href="${esc(doc.url)}" target="_blank" rel="noreferrer" title="${esc(doc.url)}">[${index + 1}] ${esc(doc.title)}</a>
+        <a class="doc-card-title" href="${esc(url)}" target="_blank" rel="noreferrer" title="${esc(url)}">[${index + 1}] ${esc(doc.title)}</a>
         <div class="doc-card-meta">
           <span class="badge">${esc(doc.language)}</span>
           <span class="badge badge--accent">${esc(doc.documentType)}</span>
@@ -63,7 +74,7 @@ function buildDocCard(doc, index) {
           ${fileSize ? `<span>${fileSize}</span>` : ""}
         </div>
       </div>
-      <a class="doc-card-dl" href="${esc(doc.url)}" target="_blank" rel="noreferrer">
+      <a class="doc-card-dl" href="${esc(url)}" target="_blank" rel="noreferrer">
         ${SVG_DL} Öffnen
       </a>
     </div>`;

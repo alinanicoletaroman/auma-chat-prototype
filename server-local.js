@@ -4,6 +4,8 @@ const path = require("path");
 
 const PORT         = 3000;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const BASIC_USER   = process.env.BASIC_USER || "auma";
+const BASIC_PASS   = process.env.BASIC_PASS || "auma2026";
 
 const { pipeline, env } = require("@xenova/transformers");
 env.cacheDir = path.join(__dirname, ".cache");
@@ -324,7 +326,24 @@ function serveFile(req, res) {
   fs.createReadStream(filePath).pipe(res);
 }
 
+function checkAuth(req, res) {
+  const authHeader = req.headers["authorization"] || "";
+  if (authHeader.startsWith("Basic ")) {
+    const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
+    const [user, pass] = decoded.split(":");
+    if (user === BASIC_USER && pass === BASIC_PASS) return true;
+  }
+  res.writeHead(401, {
+    "WWW-Authenticate": 'Basic realm="AUMA Chatbot"',
+    "Content-Type": "text/plain"
+  });
+  res.end("Unauthorized");
+  return false;
+}
+
 const server = http.createServer((req, res) => {
+  if (!checkAuth(req, res)) return;
+
   if (req.url === "/api/chat" && req.method === "POST") {
     handleChat(req, res);
   } else if (req.url === "/api/search" && req.method === "POST") {
