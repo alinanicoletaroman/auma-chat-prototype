@@ -8,5 +8,11 @@
     "api/chat.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "middleware": [
+    {
+      "src": "/(.*)",
+      "middleware": "middleware"
+    }
+  ]
 }
